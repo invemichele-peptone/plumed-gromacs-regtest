@@ -489,7 +489,7 @@ def t_committor(env):
     for np in (1, 2):
         d = env.dir(f"committor-np{np}")
         env.grompp(d, "alanine", {"nsteps": 20000}, conf="conf.0.gro")
-        write(d / "plumed.dat", COMMITTOR.format(t=0.5))
+        write(d / "plumed.dat", COMMITTOR.format(t=0.4999))  # step 250 (0.5 ps is not exact)
         run_ok(env, d, env.mdrun(d, np, args=dd(np), timeout=300), f"{np} ranks")
         c, last = first_commit_step(d), last_step(d / "COLVAR")
         check(c == 250, f"{np} ranks: committed at step {c}, instead of 250")
@@ -508,7 +508,7 @@ def t_committor_walkers(env):
         (d / f"w{i}").mkdir()
         env.grompp(d / f"w{i}", "alanine", {"nsteps": 20000}, conf=f"conf.{i}.gro")
         # only the second simulation commits
-        write(d / f"w{i}" / "plumed.dat", COMMITTOR.format(t=0.5 if i else 1e5))
+        write(d / f"w{i}" / "plumed.dat", COMMITTOR.format(t=0.4999 if i else 1e5))
     rc = env.mdrun(d, 2, multidir=["w0", "w1"], timeout=120)
     check(rc != 124, "mdrun did not stop (killed after 120 s)")
     run_ok(env, d, rc, "walkers")
@@ -543,8 +543,9 @@ def t_rerun(env):
     write(d / "plumed.dat", COMMITTOR.format(t=0.0))
     run_ok(env, d, env.mdrun(d, 1, args=["-rerun", str(d0 / "md.trr")]), "rerun with COMMITTOR")
     n = len(colvar(d / "COLVAR").get("phi", []))
-    # the legacy patches stop at the frame that commits, the native module at the next one (stop handler)
-    check(1 <= n <= 2, f"rerun with COMMITTOR committing at the first frame went through {n} of 11 frames")
+    # the legacy patches stop at the frame that commits, the native module two frames later (the stop handler
+    # gets the request at the end of a frame and communicates it at the end of the next one)
+    check(1 <= n <= 3, f"rerun with COMMITTOR committing at the first frame went through {n} of 11 frames")
     return "; ".join(msgs) + "; COMMITTOR stops it"
 
 
