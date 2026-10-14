@@ -1,0 +1,22 @@
+# LABEL                GROMACS install (cache/gromacs)  PLUMED kernel (cache/plumed)
+# legacy patches (GROMACS 2020-2024): v2.9 as released, and with the fixes (gromacs-legacy-fixes)
+2020.7/v2.9            2020.7-v2.9                      v2.9
+2020.7/v2.9-fix        2020.7-v2.9-fix                  v2.9-fix
+2021.7/v2.9            2021.7-v2.9                      v2.9
+2021.7/v2.9-fix        2021.7-v2.9-fix                  v2.9-fix
+2022.5/v2.9            2022.5-v2.9                      v2.9
+2022.5/v2.9-fix        2022.5-v2.9-fix                  v2.9-fix
+2023.5/v2.9            2023.5-v2.9                      v2.9
+2023.5/v2.9-fix        2023.5-v2.9-fix                  v2.9-fix
+2024.3/v2.9            2024.3-v2.9                      v2.9
+2024.3/v2.9-fix        2024.3-v2.9-fix                  v2.9-fix
+# the same legacy patches, which v2.10 and master ship too, with the PLUMED 2.10 and master kernels
+2024.3/v2.9:k2.10      2024.3-v2.9                      v2.10
+2024.3/v2.9-fix:k2.10f 2024.3-v2.9-fix                  v2.10-fix
+2022.5/v2.9-fix:kmf    2022.5-v2.9-fix                  master-fix
+# native module (GROMACS 2025/2026): v2.10 as released (with #1504), and with the fixes (gromacs-native-fixes)
+2025.0/v2.10           2025.0-v2.10                     v2.10
+2025.0/v2.10-fix       2025.0-v2.10-fix                 v2.10-fix
+2026.4/v2.10           2026.4-v2.10                     v2.10
+2026.4/v2.10-fix       2026.4-v2.10-fix                 v2.10-fix
+2026.4/v2.10-fix:kmf   2026.4-v2.10-fix                 master-fix

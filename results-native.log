@@ -1,0 +1,171 @@
+done 2025.0/v2.10
+done 2025.0/v2.10-fix
+done 2026.4/v2.10
+done 2026.4/v2.10-fix
+done 2026.4/v2.10-fix:kmf
+| test | 2020.7/v2.9 | 2020.7/v2.9-fix | 2021.7/v2.9 | 2021.7/v2.9-fix | 2022.5/v2.9 | 2022.5/v2.9-fix | 2023.5/v2.9 | 2023.5/v2.9-fix | 2024.3/v2.9 | 2024.3/v2.9-fix | 2024.3/v2.9:k2.10 | 2025.0/v2.10 | 2025.0/v2.10-fix | 2026.4/v2.10 | 2026.4/v2.10-fix | 2026.4/v2.10-fix:kmf |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| energy | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass |
+| pull | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | pass | pass | pass | pass |
+| pull-dd | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | pass | pass | pass | pass |
+| pull-energy | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass |
+| pull-mts | - | - | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | pass | pass | pass | pass |
+| mts-fast-step | - | - | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | **FAIL** | pass | **FAIL** | pass | pass |
+| vsite | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | **FAIL** | pass | **FAIL** | pass | pass |
+| energy-bias | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass |
+| energy-bias-dd | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | **FAIL** | **FAIL** | pass | **FAIL** | pass | pass |
+| em | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | **FAIL** | pass | **FAIL** | pass | pass |
+| data | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass |
+| checkpoint | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass |
+| committor | pass | pass | **FAIL** | **FAIL** | **FAIL** | **FAIL** | **FAIL** | pass | **FAIL** | pass | **FAIL** | **FAIL** | pass | **FAIL** | pass | pass |
+| committor-walkers | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | **FAIL** | pass | **FAIL** | pass | pass |
+| rerun | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | **FAIL** | **FAIL** | **FAIL** | **FAIL** | **FAIL** |
+| hrex | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | - | - | - | - | - |
+| shells | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | **FAIL** | pass | **FAIL** | pass | pass |
+| expanded | **FAIL** | **FAIL** | **FAIL** | **FAIL** | **FAIL** | **FAIL** | **FAIL** | **FAIL** | **FAIL** | **FAIL** | **FAIL** | - | - | - | - | - |
+| md-vv | pass | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | pass | pass | pass | pass |
+| replex-nex | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | pass | **FAIL** | - | - | - | - | - |
+| replex-bias | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | **FAIL** | pass | **FAIL** | pass | pass |
+| gpu-buffer-ops | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - |
+
+**2020.7/v2.9**
+- pull: PLUMED against pull code, 1 rank: max |dx| 0 nm, |df|/max|f| at step 0 0, |dvirial| 1.74e+03 kJ/mol (virial ~ 8.07e+04)
+- pull-dd: PLUMED against pull code, 2 ranks: max |dx| 0 nm, |df|/max|f| at step 0 7.4e-09, |dvirial| 1.74e+03 kJ/mol (virial ~ 8.07e+04)
+- vsite: with ENERGY against without, 1 rank: max |dx| 0.18 nm, |df|/max|f| at step 0 0.026, |dvirial| 1.72e+03 kJ/mol (virial ~ 8.08e+04)
+- em: oxygens, np2: 19 steps, distances differ by 0.547 nm from 1 rank
+- committor-walkers: mdrun did not stop (killed after 120 s)
+- rerun: rerun on 1 ranks: mdrun exit 1: user-direction, the job has been aborted. -------------------------------------------------------------------------- -------------------------------------------------------------------------- mpirun detected that one or more processes exited with non-zero status, thus causing the job to be terminated. The first process to do so was: Process name: [[42917,1],0] Exit code: 1 ------------------------
+- hrex: METAD, exchanges every 10 steps: 44 COLVAR lines (41 distinct), 14 hills
+- shells: mdrun exit 0: PLUMED is not applied with shells (0 COLVAR lines)
+- expanded: 21 states {0}, 21 lambdas
+- replex-nex: mdrun ran with -nex and PLUMED
+
+**2020.7/v2.9-fix**
+- expanded: 21 states {0}, 21 lambdas
+
+**2021.7/v2.9**
+- pull: PLUMED against pull code, 1 rank: max |dx| 1e-05 nm, |df|/max|f| at step 0 7.4e-08, |dvirial| 1.74e+03 kJ/mol (virial ~ 8.08e+04)
+- pull-dd: PLUMED against pull code, 2 ranks: max |dx| 0 nm, |df|/max|f| at step 0 7.4e-09, |dvirial| 1.74e+03 kJ/mol (virial ~ 8.08e+04)
+- pull-mts: PLUMED against pull code, 1 rank: max |dx| 0.076 nm, |dvirial| 543 kJ/mol (virial ~ 8.08e+04)
+- mts-fast-step: mdrun exit 0, with no error about MTS
+- vsite: with ENERGY against without, 1 rank: max |dx| 0.18 nm, |df|/max|f| at step 0 0.026, |dvirial| 1.72e+03 kJ/mol (virial ~ 8.08e+04)
+- em: oxygens, np2: 19 steps, distances differ by 0.547 nm from 1 rank
+- committor: 1 ranks: no commit in 20000 steps
+- committor-walkers: mdrun did not stop (killed after 120 s)
+- rerun: rerun with COMMITTOR committing at the first frame went through 11 frames
+- hrex: METAD, exchanges every 10 steps: 44 COLVAR lines (41 distinct), 14 hills
+- shells: mdrun exit 0: PLUMED is not applied with shells (0 COLVAR lines)
+- expanded: 21 states {0}, 21 lambdas
+- md-vv: md-vv: mdrun exit 1: Fatal error: PLUMED is not yet compatible with GROMACS new modular simulator
+- replex-nex: mdrun ran with -nex and PLUMED
+
+**2021.7/v2.9-fix**
+- committor: 1 ranks: no commit in 20000 steps
+- expanded: 21 states {0}, 21 lambdas
+
+**2022.5/v2.9**
+- pull: PLUMED against pull code, 1 rank: max |dx| 1e-05 nm, |df|/max|f| at step 0 0, |dvirial| 1.74e+03 kJ/mol (virial ~ 8.08e+04)
+- pull-dd: PLUMED against pull code, 2 ranks: max |dx| 0 nm, |df|/max|f| at step 0 7.4e-09, |dvirial| 1.74e+03 kJ/mol (virial ~ 8.08e+04)
+- pull-mts: PLUMED against pull code, 1 rank: max |dx| 0.076 nm, |dvirial| 544 kJ/mol (virial ~ 8.08e+04)
+- mts-fast-step: mdrun exit 0, with no error about MTS
+- vsite: with ENERGY against without, 1 rank: max |dx| 0.18 nm, |df|/max|f| at step 0 0.026, |dvirial| 1.72e+03 kJ/mol (virial ~ 8.08e+04)
+- em: oxygens, np2: 19 steps, distances differ by 0.511 nm from 1 rank
+- committor: 1 ranks: no commit in 20000 steps
+- committor-walkers: mdrun did not stop (killed after 120 s)
+- rerun: rerun with COMMITTOR committing at the first frame went through 11 frames
+- hrex: METAD, exchanges every 10 steps: 44 COLVAR lines (41 distinct), 14 hills
+- shells: mdrun exit 0: PLUMED is not applied with shells (0 COLVAR lines)
+- expanded: 21 states {0}, 21 lambdas
+- md-vv: md-vv: mdrun exit 1: Fatal error: PLUMED is not yet compatible with GROMACS new modular simulator
+- replex-nex: mdrun ran with -nex and PLUMED
+
+**2022.5/v2.9-fix**
+- committor: 1 ranks: no commit in 20000 steps
+- expanded: 21 states {0}, 21 lambdas
+
+**2023.5/v2.9**
+- pull: PLUMED against pull code, 1 rank: max |dx| 0 nm, |df|/max|f| at step 0 0, |dvirial| 1.74e+03 kJ/mol (virial ~ 8.08e+04)
+- pull-dd: PLUMED against pull code, 2 ranks: max |dx| 0 nm, |df|/max|f| at step 0 7.4e-09, |dvirial| 1.74e+03 kJ/mol (virial ~ 8.08e+04)
+- pull-mts: PLUMED against pull code, 1 rank: max |dx| 0.076 nm, |dvirial| 544 kJ/mol (virial ~ 8.08e+04)
+- mts-fast-step: mdrun exit 0, with no error about MTS
+- vsite: with ENERGY against without, 1 rank: max |dx| 0.18 nm, |df|/max|f| at step 0 0.026, |dvirial| 1.72e+03 kJ/mol (virial ~ 8.08e+04)
+- em: oxygens, np2: 19 steps, distances differ by 0.511 nm from 1 rank
+- committor: 1 ranks: last checkpoint at [] , last step 2332
+- committor-walkers: mdrun did not stop (killed after 120 s)
+- rerun: rerun with COMMITTOR committing at the first frame went through 11 frames
+- hrex: METAD, exchanges every 10 steps: 44 COLVAR lines (41 distinct), 14 hills
+- shells: mdrun exit 0: PLUMED is not applied with shells (0 COLVAR lines)
+- expanded: 21 states {0}, 21 lambdas
+- md-vv: md-vv: mdrun exit 1: Fatal error: PLUMED is not yet compatible with GROMACS new modular simulator
+- replex-nex: mdrun ran with -nex and PLUMED
+
+**2023.5/v2.9-fix**
+- expanded: 21 states {0}, 21 lambdas
+
+**2024.3/v2.9**
+- pull: PLUMED against pull code, 1 rank: max |dx| 0 nm, |df|/max|f| at step 0 0, |dvirial| 1.74e+03 kJ/mol (virial ~ 8.08e+04)
+- pull-dd: PLUMED against pull code, 2 ranks: max |dx| 0 nm, |df|/max|f| at step 0 7.4e-09, |dvirial| 1.74e+03 kJ/mol (virial ~ 8.08e+04)
+- pull-mts: PLUMED against pull code, 1 rank: max |dx| 0.076 nm, |dvirial| 544 kJ/mol (virial ~ 8.08e+04)
+- mts-fast-step: mdrun exit 0, with no error about MTS
+- vsite: with ENERGY against without, 1 rank: max |dx| 0.18 nm, |df|/max|f| at step 0 0.026, |dvirial| 1.72e+03 kJ/mol (virial ~ 8.08e+04)
+- em: oxygens, np2: 19 steps, distances differ by 0.511 nm from 1 rank
+- committor: 1 ranks: last checkpoint at [] , last step 2332
+- committor-walkers: mdrun did not stop (killed after 120 s)
+- rerun: rerun on 1 ranks: mdrun exit 1: invoked on rank 0 in communicator MPI_COMM_WORLD with errorcode 1. NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes. You may or may not see output from other processes, depending on exactly when Open MPI kills them. --------------------------------------------------------------------------
+- hrex: 1 rank(s) per replica: dplumed [23.06, 26.89, 22.53, 35.45, 25.43]
+- shells: mdrun exit 0: PLUMED is not applied with shells (0 COLVAR lines)
+- expanded: 21 states {0}, 21 lambdas
+- md-vv: md-vv: mdrun exit 1: Fatal error: PLUMED is not yet compatible with GROMACS new modular simulator
+- replex-nex: mdrun ran with -nex and PLUMED
+
+**2024.3/v2.9-fix**
+- expanded: 21 states {0}, 21 lambdas
+
+**2024.3/v2.9:k2.10**
+- pull: PLUMED against pull code, 1 rank: max |dx| 0 nm, |df|/max|f| at step 0 0, |dvirial| 1.74e+03 kJ/mol (virial ~ 8.08e+04)
+- pull-dd: PLUMED against pull code, 2 ranks: max |dx| 0 nm, |df|/max|f| at step 0 7.4e-09, |dvirial| 1.74e+03 kJ/mol (virial ~ 8.08e+04)
+- pull-mts: PLUMED against pull code, 1 rank: max |dx| 0.076 nm, |dvirial| 544 kJ/mol (virial ~ 8.08e+04)
+- mts-fast-step: mdrun exit 0, with no error about MTS
+- vsite: with ENERGY against without, 1 rank: max |dx| 0.18 nm, |df|/max|f| at step 0 0.026, |dvirial| 1.72e+03 kJ/mol (virial ~ 8.08e+04)
+- energy-bias-dd: virial at step 0 on 1/2/3 ranks: 5.457 / -725.7 / -5.282 (XX)
+- em: oxygens, np2: 19 steps, distances differ by 0.511 nm from 1 rank
+- committor: 1 ranks: last checkpoint at [] , last step 2332
+- committor-walkers: mdrun did not stop (killed after 120 s)
+- rerun: rerun on 1 ranks: mdrun exit 1: invoked on rank 0 in communicator MPI_COMM_WORLD with errorcode 1. NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes. You may or may not see output from other processes, depending on exactly when Open MPI kills them. --------------------------------------------------------------------------
+- hrex: 1 rank(s) per replica: dplumed [23.06, 26.89, 22.53, 35.45, 25.43]
+- shells: mdrun exit 0: PLUMED is not applied with shells (0 COLVAR lines)
+- expanded: 21 states {0}, 21 lambdas
+- md-vv: md-vv: mdrun exit 1: Fatal error: PLUMED is not yet compatible with GROMACS new modular simulator
+- replex-nex: mdrun ran with -nex and PLUMED
+
+**2025.0/v2.10**
+- mts-fast-step: mdrun exit 0, with no error about MTS
+- vsite: with ENERGY against without, 1 rank: max |dx| 0.18 nm, |df|/max|f| at step 0 0.026, |dvirial| 1.08e+03 kJ/mol (virial ~ 8.08e+04)
+- energy-bias-dd: virial at step 0 on 1/2/3 ranks: 5.457 / -725.7 / -5.282 (XX)
+- em: vsites, energy: 19 steps, distances differ by 0.415 nm from 1 rank
+- committor: 1 ranks: committed at step 2332, ran to step 20000
+- committor-walkers: last steps [20000, 20000]
+- rerun: rerun with COMMITTOR committing at the first frame went through 11 frames
+- shells: 44 COLVAR lines (21 distinct), 6 hills
+- replex-bias: mdrun exit 1: Internal error (bug): An error occurred while PLUMED was calculating the forces :The PLUMED patch is still not compatible with the replica exchange if PLUMED computes biases
+
+**2025.0/v2.10-fix**
+- rerun: rerun with COMMITTOR committing at the first frame went through 11 frames
+
+**2026.4/v2.10**
+- mts-fast-step: mdrun exit 0, with no error about MTS
+- vsite: with ENERGY against without, 1 rank: max |dx| 0.18 nm, |df|/max|f| at step 0 0.026, |dvirial| 1.08e+03 kJ/mol (virial ~ 8.08e+04)
+- energy-bias-dd: virial at step 0 on 1/2/3 ranks: 5.457 / -725.7 / -5.282 (XX)
+- em: vsites, energy: 19 steps, distances differ by 0.415 nm from 1 rank
+- committor: 1 ranks: committed at step 2332, ran to step 20000
+- committor-walkers: last steps [20000, 20000]
+- rerun: rerun with COMMITTOR committing at the first frame went through 11 frames
+- shells: 44 COLVAR lines (21 distinct), 6 hills
+- replex-bias: mdrun exit 1: Internal error (bug): An error occurred while PLUMED was calculating the forces :The PLUMED patch is still not compatible with the replica exchange if PLUMED computes biases
+
+**2026.4/v2.10-fix**
+- rerun: rerun with COMMITTOR committing at the first frame went through 11 frames
+
+**2026.4/v2.10-fix:kmf**
+- rerun: rerun with COMMITTOR committing at the first frame went through 11 frames
+
