@@ -148,8 +148,12 @@ class Gromacs:
             raise Fail("grompp failed: " + " | ".join(" ".join(e.split()) for e in err)[:400])
 
     def mdrun(self, d, np=1, plumed="plumed.dat", args=(), env=None, multidir=None, timeout=None):
-        """Run mdrun in D (or in MULTIDIR subdirectories of D); return the exit code (124 on timeout)"""
+        """Run mdrun in D (or in MULTIDIR subdirectories of D); return the exit code (124 on timeout).
+        With a GPU build, everything runs on the CPU unless ARGS choose otherwise: GPU sums are not
+        reproducible, and most tests compare two runs."""
         cmd = [*self.mpirun, "-np", str(np), self.gmx, "mdrun", "-ntomp", "1", "-deffnm", "md", "-s", "topol.tpr"]
+        if self.cuda and "-nb" not in args:
+            cmd += ["-nb", "cpu", "-pme", "cpu", "-bonded", "cpu", "-update", "cpu"]
         if multidir:
             cmd += ["-multidir", *multidir]
         if plumed:
