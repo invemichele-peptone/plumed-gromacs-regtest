@@ -5,7 +5,7 @@
 
 Each non-comment line of the matrix file is: LABEL GROMACS_INSTALL KERNEL_INSTALL, where the installs are
 directories under cache/gromacs and cache/plumed (or absolute paths). The table is written to
-results/matrix.md, with one column per combination.
+results/matrix.md (with emoji for the colors) and results/matrix.html, with one column per combination.
 """
 import argparse
 import json
@@ -34,7 +34,35 @@ def run(combo, tests):
     return label
 
 
-def report(combos):
+MARK = {"PASS": "✅", "FAIL": "❌", "SKIP": "➖"}
+SYMBOL = {"PASS": "✓", "FAIL": "✗", "SKIP": "–"}
+ANSI = {"PASS": "\033[32m", "FAIL": "\033[1;31m", "SKIP": "\033[2m"}
+
+
+def read_matrix(path):
+    """The combinations (label, gromacs, kernel) of a matrix file, and their groups (title, description, labels):
+    a comment just before a combination starts a group, named by the text before its first colon."""
+    combos, groups, comment = [], [], None
+    for line in Path(path).read_text().splitlines():
+        if line.startswith("#"):
+            comment = line[1:].strip()
+        elif line.strip():
+            combos.append(tuple(line.split()[:3]))
+            if comment is not None or not groups:
+                title, _, desc = (comment or "").partition(":")
+                groups.append((title.strip(), desc.strip(), []))
+                comment = None
+            groups[-1][2].append(combos[-1][0])
+    return combos, groups
+
+
+def header(label, sep):
+    """2024.3/v2.9-fix:k2.10f -> GROMACS version, patches and (if not the one of the patches) the kernel"""
+    rest, _, kernel = label.partition(":")
+    return sep.join(x for x in rest.split("/", 1) + [kernel] if x)
+
+
+def report(combos, groups):
     data = {}
     for label, _, _ in combos:
         f = HERE / "results" / label / "results.json"
@@ -43,20 +71,175 @@ def report(combos):
     tests = []
     for r in data.values():
         tests += [t for t in r if t not in tests]
-    mark = {"PASS": "pass", "FAIL": "**FAIL**", "SKIP": "-"}
     labels = [c[0] for c in combos if c[0] in data]
-    lines = ["| test | " + " | ".join(labels) + " |", "|---|" + "---|" * len(labels)]
+    status = {(t, l): data[l].get(t, {}).get("status", "") for t in tests for l in labels}
+    fails = {l: [(t, r["message"]) for t, r in data[l].items() if r["status"] == "FAIL"] for l in labels}
+
+    # markdown, with emoji for the colors (GitHub renders them)
+    lines = ["| test | " + " | ".join(header(l, "<br>") for l in labels) + " |", "|---|" + ":---:|" * len(labels)]
     for t in tests:
-        lines.append(f"| {t} | " + " | ".join(mark.get(data[l].get(t, {}).get("status"), "") for l in labels) + " |")
-    lines.append("")
+        lines.append(f"| {t} | " + " | ".join(MARK.get(status[t, l], "") for l in labels) + " |")
+    lines += ["", f"{MARK['PASS']} pass, {MARK['FAIL']} fail, {MARK['SKIP']} not applicable", ""]
     for l in labels:
-        fails = [(t, r["message"]) for t, r in data[l].items() if r["status"] == "FAIL"]
-        if fails:
-            lines.append(f"**{l}**")
-            lines += [f"- {t}: {m}" for t, m in fails]
-            lines.append("")
-    (HERE / "results" / "matrix.md").write_text("\n".join(lines) + "\n")
-    print("\n".join(lines))
+        if fails[l]:
+            lines += [f"**{l}**"] + [f"- {t}: {m}" for t, m in fails[l]] + [""]
+    (HERE / "results" / "matrix.md").write_text("\n".join(lines))
+    (HERE / "results" / "matrix.html").write_text(html_report(data, tests, labels, groups, status, fails))
+
+    # terminal: one line per combination
+    color = sys.stdout.isatty()
+    for l in labels:
+        n = {k: sum(r["status"] == k for r in data[l].values()) for k in MARK}
+        counts = "  ".join((ANSI[k] if color and n[k] else "") + f"{SYMBOL[k]} {n[k]:2d}" + ("\033[0m" if color else "")
+                           for k in MARK)
+        print(f"{l:24s} {counts}   {' '.join(t for t, _ in fails[l])}")
+    print(f"tables: {HERE / 'results' / 'matrix.md'}, {HERE / 'results' / 'matrix.html'}")
+
+
+def html_report(data, tests, labels, groups, status, fails):
+    import html
+    import platform
+    from datetime import date
+    try:
+        import regtest
+        docs = {name: " ".join((f.__doc__ or "").split()) for name, f in regtest.TESTS}
+    except Exception:
+        docs = {}
+    e = lambda x: html.escape(str(x), quote=True)
+    groups = [(t, d, [l for l in ls if l in data]) for t, d, ls in groups]
+    groups = [g for g in groups if g[2]]
+    first = {g[2][0] for g in groups}
+
+    def colhead(l):
+        parts = header(l, "\n").split("\n")
+        spans = [f'<span class="ver">{e(parts[0])}</span>', f'<span class="patch">{e(parts[1])}</span>']
+        if len(parts) > 2:
+            spans.append(f'<span class="kern">kernel {e(parts[2])}</span>')
+        return f'<th scope="col" class="{"g" if l in first else ""}" title="{e(l)}">{"".join(spans)}</th>'
+
+    def cell(t, l):
+        s = status[t, l]
+        r = data[l].get(t, {})
+        tip = f"{l} · {t}: {r.get('message', 'not run')}" + (f" ({r['seconds']} s)" if "seconds" in r else "")
+        g = " g" if l in first else ""
+        return f'<td class="{s or "none"}{g}" title="{e(tip)}">{SYMBOL.get(s, "")}</td>'
+
+    nfail = {l: len(fails[l]) for l in labels}
+    rows = ['<tr class="sum"><th scope="row">failures</th>' + "".join(
+        f'<td class="{"FAIL" if nfail[l] else "PASS"}{" g" if l in first else ""}">{nfail[l]}</td>' for l in labels)
+        + "</tr>"]
+    for t in tests:
+        rows.append(f'<tr><th scope="row" title="{e(docs.get(t, ""))}">{e(t)}</th>'
+                    + "".join(cell(t, l) for l in labels) + "</tr>")
+    detail = []
+    for l in labels:
+        if fails[l]:
+            items = "".join(f"<dt>{e(t)}</dt><dd>{e(m)}</dd>" for t, m in fails[l])
+            detail.append(f'<section><h3>{e(l)}</h3><dl>{items}</dl></section>')
+    total = sum(nfail.values())
+    clean = sum(1 for l in labels if not nfail[l])
+    return HTML.format(
+        date=date.today().isoformat(), machine=e(platform.machine()), ncombo=len(labels), ntest=len(tests),
+        clean=clean, total=total,
+        groups="".join(f'<th scope="colgroup" colspan="{len(ls)}" class="g" title="{e(d)}">{e(t)}</th>'
+                       for t, d, ls in groups),
+        heads="".join(colhead(l) for l in labels), rows="\n".join(rows), detail="\n".join(detail) or "<p>None.</p>")
+
+
+HTML = """<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- page -->
+<title>PLUMED GROMACS Regtests</title>
+<style>
+/* one matrix, tests down and combinations across, grouped like matrix.txt; the failures in full below */
+:root {{
+  --bg: #f5f7f8; --surface: #ffffff; --fg: #1b2229; --muted: #5d6973; --line: #d6dce1;
+  --pass: #17663f; --pass-bg: #d5efdf; --fail: #a4231b; --fail-bg: #f9d6d1; --na: #8c969f; --na-bg: #edf0f2;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+}}
+@media (prefers-color-scheme: dark) {{ :root:not([data-theme="light"]) {{
+  --bg: #12161a; --surface: #192026; --fg: #e2e7eb; --muted: #9aa5af; --line: #2c343c;
+  --pass: #79d7a2; --pass-bg: #163626; --fail: #ff9387; --fail-bg: #4b1c18; --na: #66717b; --na-bg: #20272d;
+  color-scheme: dark; }} }}
+:root[data-theme="dark"] {{
+  --bg: #12161a; --surface: #192026; --fg: #e2e7eb; --muted: #9aa5af; --line: #2c343c;
+  --pass: #79d7a2; --pass-bg: #163626; --fail: #ff9387; --fail-bg: #4b1c18; --na: #66717b; --na-bg: #20272d;
+  color-scheme: dark; }}
+body {{ background: var(--bg); color: var(--fg); font: 14px/1.45 var(--sans); margin: 0; }}
+main {{ padding-inline: 16px; padding-block: 24px 40px; max-width: 1400px; margin: 0 auto; display: grid; gap: 20px; }}
+h1 {{ font-size: 1.5rem; margin: 0; text-wrap: balance; }}
+h2 {{ font-size: 1.1rem; margin: 0 0 8px; }}
+h3 {{ font: 600 0.95rem var(--mono); margin: 0 0 6px; }}
+p {{ margin: 0; max-width: 70ch; }}
+.meta, .legend {{ color: var(--muted); }}
+.legend {{ display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; }}
+.key {{ display: inline-grid; place-items: center; width: 1.6em; height: 1.6em; border-radius: 3px; font-weight: 700;
+  margin-right: 6px; }}
+.scroll {{ overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }}
+table {{ border-collapse: collapse; font-variant-numeric: tabular-nums; }}
+th, td {{ border: 1px solid var(--line); }}
+thead th {{ font-weight: 400; padding: 6px 4px; vertical-align: bottom; }}
+thead tr:first-child th {{ font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--muted); text-align: left; padding: 6px 8px; }}
+thead th span {{ display: block; font-family: var(--mono); font-size: 0.78rem; white-space: nowrap; }}
+.ver {{ font-weight: 700; }}
+.kern {{ color: var(--muted); }}
+tbody th {{ text-align: left; font: 500 0.85rem var(--mono); padding: 4px 10px; white-space: nowrap; }}
+tbody th, thead th:first-child {{ position: sticky; left: 0; background: var(--surface); z-index: 1; }}
+td {{ text-align: center; font-weight: 700; min-width: 2.2em; height: 1.9em; }}
+td.PASS, .key.PASS {{ background: var(--pass-bg); color: var(--pass); }}
+td.FAIL, .key.FAIL {{ background: var(--fail-bg); color: var(--fail); }}
+td.SKIP, .key.SKIP {{ background: var(--na-bg); color: var(--na); }}
+td.none {{ background: var(--surface); }}
+tr.sum td, tr.sum th {{ border-bottom: 2px solid var(--muted); }}
+.g {{ border-left: 2px solid var(--muted); }}
+[title]:hover {{ outline: 2px solid var(--fg); outline-offset: -2px; }}
+.fails {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 34rem), 1fr)); gap: 16px; }}
+.fails section {{ min-width: 0; }}
+dl {{ margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 3px 12px; }}
+dt {{ font: 500 0.82rem var(--mono); color: var(--fail); }}
+dd {{ margin: 0; font-size: 0.85rem; overflow-wrap: anywhere; }}
+</style>
+<!-- /page -->
+</head>
+<body>
+<!-- page -->
+<main>
+<header>
+<h1>PLUMED + GROMACS regtests</h1>
+<p class="meta">matrix.py, {date}, {machine}: {ncombo} combinations of GROMACS, PLUMED patches and PLUMED kernel,
+{ntest} tests. {clean} combinations pass everything; {total} failures in all.</p>
+</header>
+<div class="legend"><span><span class="key PASS">✓</span>pass</span><span><span class="key FAIL">✗</span>fail</span>
+<span><span class="key SKIP">–</span>not applicable to this combination</span>
+<span>Columns: GROMACS version, PLUMED patches (-fix: with the fixes), kernel if not the one of the patches.
+Hover a test or a cell for what it checks and the numbers.</span></div>
+<div class="scroll">
+<table>
+<thead>
+<tr><th></th>{groups}</tr>
+<tr><th scope="col">test</th>{heads}</tr>
+</thead>
+<tbody>
+{rows}
+</tbody>
+</table>
+</div>
+<div>
+<h2>Failures</h2>
+<div class="fails">
+{detail}
+</div>
+</div>
+</main>
+<!-- /page -->
+</body>
+</html>
+"""
 
 
 def main():
@@ -68,14 +251,13 @@ def main():
     ap.add_argument("--report-only", action="store_true")
     a = ap.parse_args()
     import re
-    combos = [tuple(l.split()[:3]) for l in Path(a.matrix).read_text().splitlines()
-              if l.strip() and not l.startswith("#")]
+    combos, groups = read_matrix(a.matrix)
     selected = [c for c in combos if re.search(a.only, c[0])]
     if not a.report_only:
         with ThreadPoolExecutor(a.jobs) as pool:
             for label in pool.map(lambda c: run(c, a.tests), selected):
                 print(f"done {label}", flush=True)
-    report(combos)
+    report(combos, groups)
 
 
 if __name__ == "__main__":

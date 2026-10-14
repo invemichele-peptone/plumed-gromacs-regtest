@@ -39,7 +39,7 @@ MPI_HOME=/path/to/mpi PLUMED_REPO=/path/to/plumed2 ./build-all.sh
 # run the tests on one combination
 ./regtest.py --gmx cache/gromacs/2024.3-v2.9-fix/bin/gmx_mpi --kernel cache/plumed/v2.9-fix/lib/libplumedKernel.so
 
-# run them on all the combinations of matrix.txt and write results/matrix.md
+# run them on all the combinations of matrix.txt and write results/matrix.md and results/matrix.html
 ./matrix.py --jobs 4
 
 ./regtest.py --list      # the tests and what they check
