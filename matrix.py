@@ -98,16 +98,16 @@ def summary(labels, fails, builds, commits, run_date):
             cells[b.split()[1], None] = "build failed"
     versions.sort(key=lambda v: ([int(x) for x in v.split("-")[0].split(".")], v))
     link = lambda k, c: f"{k} [`{c[:9]}`](https://github.com/plumed/plumed2/commit/{c})"
-    lines = [f"Last run on {run_date}, with PLUMED " + ", ".join(link(k, c) for k, c in commits.items())
-             + f": {MARK['PASS']} all the tests pass, {MARK['FAIL']} some fail (or the build failed), empty: no patch "
-             "for that version of GROMACS. The [full results](RESULTS.md) have the tests and the numbers, and the "
-             "[history](HISTORY.md) the earlier runs.", "",
+    lines = [f"**Last run: {run_date}**, with PLUMED " + ", ".join(link(k, c) for k, c in commits.items()) + ".", "",
              "| PLUMED \\ GROMACS | " + " | ".join(versions) + " |", "|---|" + ":---:|" * len(versions)]
     for b in branches:
         name = f"{b} (build failed)" if (b, None) in cells else b
         lines.append(f"| {name} | " + " | ".join(cells.get((b, v), "") for v in versions) + " |")
-    lines += ["", "GROMACS without patches, which fails the tests of what only the patches of PLUMED add, is in the "
-              "full results."]
+    lines += ["", f"{MARK['PASS']} all the tests pass, {MARK['FAIL']} some fail (or the build failed), empty: no patch "
+              "for that version of GROMACS. GROMACS without patches, which fails the tests of what only the patches "
+              "of PLUMED add, is in the full results.", "",
+              "- Full results, with the tests and the numbers: [RESULTS.md](RESULTS.md)",
+              "- One line for each run: [HISTORY.md](HISTORY.md)", "", "---"]
     return "\n".join(lines)
 
 
