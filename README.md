@@ -1,13 +1,13 @@
 # Regression tests for PLUMED with GROMACS
 
 <!-- summary: written by matrix.py -->
-**Last run: 2026-10-15**, with PLUMED v2.9 [`8e9e512a2`](https://github.com/plumed/plumed2/commit/8e9e512a200c9d78e952b885d18622e0a9fefb8f), v2.10 [`4b8956204`](https://github.com/plumed/plumed2/commit/4b8956204984c2bfbfc6335f0577d576882c13e3), master [`b279e3a3a`](https://github.com/plumed/plumed2/commit/b279e3a3ab8df63ca1515204a4ed20aa09db7617).
+**Last run: 2026-10-15**, with PLUMED v2.9 [`8e9e512a2`](https://github.com/plumed/plumed2/commit/8e9e512a200c9d78e952b885d18622e0a9fefb8f), v2.10 [`75d6916f6`](https://github.com/plumed/plumed2/commit/75d6916f63a9c55cd2c64f0364e430aeb8ddf4a7), master [`386d0d9b7`](https://github.com/plumed/plumed2/commit/386d0d9b792968e34735a142a9baa5739e9b2c30).
 
 | PLUMED \ GROMACS | 2020.7 | 2021.7 | 2022.5 | 2023.5 | 2024.3 | 2025.5 | 2026.4 |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | v2.9 | ✅ | ✅ | ✅ | ✅ | ✅ |  |  |
-| v2.10 |  |  | ❌ | ❌ | ❌ | ❌ | ❌ |
-| master |  |  |  |  | ❌ | ❌ | ❌ |
+| v2.10 |  |  | ✅ | ✅ | ✅ | ✅ | ✅ |
+| master |  |  |  |  | ✅ | ✅ | ✅ |
 
 ✅ all the tests pass, ❌ some fail (or the build failed), empty: no patch for that version of GROMACS. GROMACS without patches, which fails the tests of what only the patches of PLUMED add, is in the full results.
 

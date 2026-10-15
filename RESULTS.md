@@ -1,6 +1,6 @@
 # Results
 
-`matrix.py` on 2026-10-15, aarch64. PLUMED: v2.9 `8e9e512a2`, v2.10 `4b8956204`, master `b279e3a3a`. Columns: GROMACS version, the PLUMED branch whose patch was applied (vanilla: GROMACS without patches), and the kernel when it is not of that branch.
+`matrix.py` on 2026-10-15, aarch64. PLUMED: v2.9 `8e9e512a2`, v2.10 `75d6916f6`, master `386d0d9b7`. Columns: GROMACS version, the PLUMED branch whose patch was applied (vanilla: GROMACS without patches), and the kernel when it is not of that branch.
 
 | test | 2020.7<br>v2.9 | 2021.7<br>v2.9 | 2022.5<br>v2.9 | 2023.5<br>v2.9 | 2024.3<br>v2.9 | 2022.5<br>v2.10 | 2023.5<br>v2.10 | 2024.3<br>v2.10 | 2025.5<br>v2.10 | 2026.4<br>v2.10 | 2024.3<br>master | 2025.5<br>master | 2026.4<br>master | 2025.5<br>vanilla<br>v2.10 | 2025.5<br>vanilla<br>master | 2026.4<br>vanilla<br>v2.10 | 2026.4<br>vanilla<br>master |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
@@ -8,7 +8,7 @@
 | pull | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | pull-dd | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | pull-energy | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| pull-mts | ➖ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| pull-mts | ➖ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | mts-fast-step | ➖ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | vsite | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | energy-bias | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
@@ -18,9 +18,9 @@
 | checkpoint | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | committor | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | committor-walkers | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| rerun | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| rerun | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | hrex | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ➖ | ➖ | ✅ | ➖ | ➖ | ➖ | ➖ | ➖ | ➖ |
-| shells | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| shells | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | expanded | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ➖ | ➖ | ✅ | ➖ | ➖ | ➖ | ➖ | ➖ | ➖ |
 | md-vv | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | replex-nex | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ➖ | ➖ | ✅ | ➖ | ➖ | ➖ | ➖ | ➖ | ➖ |
@@ -29,43 +29,11 @@
 
 ✅ pass, ❌ fail, ➖ not applicable
 
-**2022.5/v2.10**
-- pull-mts: PLUMED against pull code, 1 rank: max |dx| 1e-05 nm, |df|/max|f| at step 0 0.026, |dvirial| at step 0 3.8 kJ/mol, max 5.19 kJ/mol (virial ~ 8.08e+04)
-
-**2023.5/v2.10**
-- pull-mts: PLUMED against pull code, 1 rank: max |dx| 1e-05 nm, |df|/max|f| at step 0 0.026, |dvirial| at step 0 3.8 kJ/mol, max 5.16 kJ/mol (virial ~ 8.08e+04)
-
-**2024.3/v2.10**
-- pull-mts: PLUMED against pull code, 1 rank: max |dx| 1e-05 nm, |df|/max|f| at step 0 0.026, |dvirial| at step 0 3.8 kJ/mol, max 5.21 kJ/mol (virial ~ 8.08e+04)
-
-**2025.5/v2.10**
-- pull-mts: PLUMED against pull code, 1 rank: max |dx| 1e-05 nm, |df|/max|f| at step 0 0.026, |dvirial| at step 0 3.8 kJ/mol, max 5.15 kJ/mol (virial ~ 8.08e+04)
-- rerun: rerun with COMMITTOR: committed at time 0.04, stopped after 3 of 11 frames (last time 0.08)
-- shells: rerun of one frame: 4 COLVAR lines
-
-**2026.4/v2.10**
-- pull-mts: PLUMED against pull code, 1 rank: max |dx| 1e-05 nm, |df|/max|f| at step 0 0.026, |dvirial| at step 0 3.8 kJ/mol, max 5.15 kJ/mol (virial ~ 8.08e+04)
-- rerun: rerun with COMMITTOR: committed at time 0.04, stopped after 3 of 11 frames (last time 0.08)
-- shells: rerun of one frame: 4 COLVAR lines
-
-**2024.3/master**
-- pull-mts: PLUMED against pull code, 1 rank: max |dx| 1e-05 nm, |df|/max|f| at step 0 0.026, |dvirial| at step 0 3.8 kJ/mol, max 5.21 kJ/mol (virial ~ 8.08e+04)
-
-**2025.5/master**
-- pull-mts: PLUMED against pull code, 1 rank: max |dx| 1e-05 nm, |df|/max|f| at step 0 0.026, |dvirial| at step 0 3.8 kJ/mol, max 5.15 kJ/mol (virial ~ 8.08e+04)
-- rerun: rerun with COMMITTOR: committed at time 0.04, stopped after 3 of 11 frames (last time 0.08)
-- shells: rerun of one frame: 4 COLVAR lines
-
-**2026.4/master**
-- pull-mts: PLUMED against pull code, 1 rank: max |dx| 1e-05 nm, |df|/max|f| at step 0 0.026, |dvirial| at step 0 3.8 kJ/mol, max 5.15 kJ/mol (virial ~ 8.08e+04)
-- rerun: rerun with COMMITTOR: committed at time 0.04, stopped after 3 of 11 frames (last time 0.08)
-- shells: rerun of one frame: 4 COLVAR lines
-
 **2025.5/vanilla:v2.10**
 - energy: 1 ranks: ENERGY differs from the potential energy by 1 (relative)
 - mts-fast-step: mdrun exit 0, with no error about MTS
 - energy-bias: forces differ from 0.5 times the unbiased ones by up to 0.999 of the largest force
-- checkpoint: 1 ranks: states at steps [4775, 8525, 12275, 16250, 20000], checkpoints at [4500, 8250, 12000, 15975, 19725, 20000]
+- checkpoint: 1 ranks: states at steps [5725, 8525, 12375, 16300, 20000], checkpoints at [4700, 7500, 11350, 15275, 18975, 20000]
 - committor: 1 ranks: committed at step 250, ran to step 20000
 - committor-walkers: last steps [20000, 20000]
 - rerun: rerun with COMMITTOR: committed at time 0.04, stopped after 11 of 11 frames (last time 0.4)
@@ -76,7 +44,7 @@
 - energy: 1 ranks: ENERGY differs from the potential energy by 1 (relative)
 - mts-fast-step: mdrun exit 0, with no error about MTS
 - energy-bias: forces differ from 0.5 times the unbiased ones by up to 0.999 of the largest force
-- checkpoint: 1 ranks: states at steps [4950, 8475, 12275, 16200, 20000], checkpoints at [4650, 8175, 11975, 15900, 19700, 20000]
+- checkpoint: 1 ranks: states at steps [5700, 8650, 12100, 16150, 20000], checkpoints at [4700, 7650, 11100, 15150, 19000, 20000]
 - committor: 1 ranks: committed at step 250, ran to step 20000
 - committor-walkers: last steps [20000, 20000]
 - rerun: rerun with COMMITTOR: committed at time 0.04, stopped after 11 of 11 frames (last time 0.4)
@@ -87,7 +55,7 @@
 - energy: 1 ranks: ENERGY differs from the potential energy by 1 (relative)
 - mts-fast-step: mdrun exit 0, with no error about MTS
 - energy-bias: forces differ from 0.5 times the unbiased ones by up to 0.999 of the largest force
-- checkpoint: 1 ranks: states at steps [5750, 8800, 12100, 15975, 20000], checkpoints at [4675, 7725, 11025, 14900, 18925, 20000]
+- checkpoint: 1 ranks: states at steps [5700, 8450, 12225, 16200, 20000], checkpoints at [4675, 7425, 11200, 15175, 18975, 20000]
 - committor: 1 ranks: committed at step 250, ran to step 20000
 - committor-walkers: last steps [20000, 20000]
 - rerun: rerun with COMMITTOR: committed at time 0.04, stopped after 11 of 11 frames (last time 0.4)
@@ -98,7 +66,7 @@
 - energy: 1 ranks: ENERGY differs from the potential energy by 1 (relative)
 - mts-fast-step: mdrun exit 0, with no error about MTS
 - energy-bias: forces differ from 0.5 times the unbiased ones by up to 0.999 of the largest force
-- checkpoint: 1 ranks: states at steps [6050, 8650, 12250, 16100, 20000], checkpoints at [4700, 7300, 10900, 14750, 18650, 20000]
+- checkpoint: 1 ranks: states at steps [6625, 8975, 12475, 16250, 20000], checkpoints at [4700, 7050, 10550, 14325, 18075, 20000]
 - committor: 1 ranks: committed at step 250, ran to step 20000
 - committor-walkers: last steps [20000, 20000]
 - rerun: rerun with COMMITTOR: committed at time 0.04, stopped after 11 of 11 frames (last time 0.4)
