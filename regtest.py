@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Regression tests for PLUMED with GROMACS.
 
-    regtest.py --gmx PREFIX/bin/gmx_mpi --kernel PLUMED/lib/libplumedKernel.so [--tests REGEX] [--out DIR]
+    regtest.py --gmx PREFIX/bin/gmx_mpi [--kernel PLUMED/lib/libplumedKernel.so] [--tests REGEX] [--out DIR]
 
 There are no reference files: every test checks a property that must hold for any GROMACS version, any
 PLUMED version and any way of patching GROMACS, so the same tests run on all their combinations:
@@ -107,12 +107,14 @@ class Gromacs:
     """One combination of a patched GROMACS and a PLUMED kernel"""
 
     def __init__(self, gmx, kernel, mpirun, out, timeout):
-        gmx, kernel = str(Path(gmx).resolve()), str(Path(kernel).resolve())
+        gmx = str(Path(shutil.which(gmx) or gmx).resolve())
+        kernel = kernel and str(Path(kernel).resolve())
         self.gmx, self.kernel, self.mpirun, self.out, self.timeout = gmx, kernel, mpirun, Path(out).resolve(), timeout
-        ver = subprocess.run([gmx, "--version"], capture_output=True, text=True, env=self.env()).stdout
+        r = subprocess.run([gmx, "--version"], capture_output=True, text=True, env=self.env())
+        ver = r.stdout
         m = re.search(r"GROMACS version:\s+(\d{4})\.?(\d*)", ver)
         if not m:
-            sys.exit(f"cannot run {gmx} --version")
+            raise RuntimeError(f"cannot run {gmx} --version: " + " ".join((ver + r.stderr).split()[-40:]))
         self.version = (int(m.group(1)), int(m.group(2) or 0))
         self.cuda = bool(re.search(r"GPU support:\s+CUDA", ver))
         h = subprocess.run([gmx, "mdrun", "-h"], capture_output=True, text=True, env=self.env())
@@ -121,7 +123,9 @@ class Gromacs:
         self.out.mkdir(parents=True, exist_ok=True)
 
     def env(self, extra=None):
-        e = dict(os.environ, PLUMED_KERNEL=str(self.kernel), OMP_NUM_THREADS="1")
+        e = dict(os.environ, OMP_NUM_THREADS="1")
+        if self.kernel:
+            e["PLUMED_KERNEL"] = self.kernel
         e.pop("GMX_DISABLE_MODULAR_SIMULATOR", None)
         e.update(extra or {})
         return e
@@ -160,7 +164,8 @@ class Gromacs:
             cmd += ["-plumed", plumed]
         cmd += list(args)
         with open(d / "mdrun.out", "w") as out:
-            # in its own process group, so that a hanging run can be killed with all its ranks
+            # in its own session, so that killing a hanging run does not reach this script (the ranks of Open MPI
+            # are in their own process groups, and stop when mpirun is killed)
             p = subprocess.Popen(cmd, cwd=d, stdout=out, stderr=subprocess.STDOUT, env=self.env(env),
                                  start_new_session=True)
             try:
@@ -176,7 +181,7 @@ class Gromacs:
     def frames(self, trr):
         """Frames of a trr file: [{'step', 'box', 'x', 'f'}], coordinates as flat lists"""
         r = subprocess.run([self.gmx, "dump", "-f", str(trr)], capture_output=True, text=True, env=self.env())
-        frames, cur, key = [], None, None
+        frames, cur = [], None
         num = r"([-+\d.eE]+)"
         for line in r.stdout.splitlines():
             if re.match(r"\S.* frame \d+:", line):
@@ -217,7 +222,7 @@ def dd(np):
     return [] if np == 1 else ["-dd", str(np), "1", "1", "-npme", "0", "-dlb", "no"]
 
 
-def water_index(env, extra):
+def water_index(extra):
     natoms = 3636
     groups = {"System": list(range(1, natoms + 1)), **extra}
     # grompp reads index files line by line with a limited buffer: write 15 atoms per line
@@ -234,20 +239,22 @@ SPECTATOR = "e: ENERGY\nPRINT ARG=e STRIDE={stride} FILE=ENERGY FMT=%.8e\n"
 MTS = {"mts": "yes", "mts-levels": 2, "mts-level2-factor": 2, "mts-level2-forces": "longrange-nonbonded"}
 
 
-def compare_runs(env, d1, d2, what, xtol=1e-4, ftol=2e-5, vtol=1e-4, force_steps=(0,)):
-    """Compare positions (all frames), forces (FORCE_STEPS) and the virial (energy frames) of two runs"""
+def compare_runs(env, d1, d2, what, xtol=1e-4, ftol=2e-5, vtol0=0.1, vtol=1e-4, force_steps=(0,)):
+    """Compare positions (all frames), forces (FORCE_STEPS) and the virial (energy frames) of two runs. The virial is
+    compared within VTOL0 kJ/mol at step 0 (that of a restraint between two water oxygens is about 1.7e3 kJ/mol), and
+    then within VTOL of the total (8e4 kJ/mol for the water box), as round-off makes the two runs drift apart."""
     f1, f2 = env.frames(d1 / "md.trr"), env.frames(d2 / "md.trr")
     check(len(f1) == len(f2) and f1, f"{what}: {len(f1)} and {len(f2)} frames")
     dx = max(maxdiff(a["x"], b["x"]) for a, b in zip(f1, f2))
     df = max((force_diff(a["f"], b["f"]) for a, b in zip(f1, f2) if a.get("step") in force_steps and a["f"]), default=0)
     terms = ["Vir-XX", "Vir-YY", "Vir-ZZ"]
     e1, e2 = env.energy(d1, terms), env.energy(d2, terms)
+    dv0 = max(abs(e1[t][0] - e2[t][0]) for t in terms)
     dv = max(maxdiff(e1[t], e2[t]) for t in terms)
     vmax = max(abs(x) for t in terms for x in e1[t])
-    msg = f"{what}: max |dx| {dx:.2g} nm, |df|/max|f| at step 0 {df:.2g}, |dvirial| {dv:.3g} kJ/mol"
-    if not force_steps:
-        msg = f"{what}: max |dx| {dx:.2g} nm, |dvirial| {dv:.3g} kJ/mol"
-    check(dx < xtol and df < ftol and dv < vtol * vmax, msg + f" (virial ~ {vmax:.3g})")
+    msg = (f"{what}: max |dx| {dx:.2g} nm, |df|/max|f| at step 0 {df:.2g}, |dvirial| at step 0 {dv0:.2g} kJ/mol, "
+           f"max {dv:.3g} kJ/mol")
+    check(dx < xtol and df < ftol and dv0 < vtol0 and dv < vtol * vmax, msg + f" (virial ~ {vmax:.3g})")
     return msg
 
 
@@ -259,6 +266,8 @@ def gromacs_error(text):
 
 
 def run_ok(env, d, rc, what):
+    if rc == 124:
+        raise Fail(f"{what}: mdrun did not finish and was killed after the timeout")
     if rc != 0:
         raise Fail(f"{what}: mdrun exit {rc}: {gromacs_error(env.output(d))[:400]}")
 
@@ -282,16 +291,16 @@ def t_energy(env):
     return "relative difference " + ", ".join(msgs)
 
 
-def restraint_vs_pull(env, tag, np=1, plumed_extra="", mdp_extra=None, atoms=(1, 5), force_steps=(0,)):
+def restraint_vs_pull(env, tag, np=1, plumed_extra="", mdp_extra=None, atoms=(1, 5)):
     mdp = {"nsteps": 20, "nstxout": 1, "nstfout": 1, "nstcalcenergy": 5, "nstenergy": 5, "nstlog": 0, **(mdp_extra or {})}
-    ndx = water_index(env, {"A1": [atoms[0]], "A2": [atoms[1]]})
+    ndx = water_index({"A1": [atoms[0]], "A2": [atoms[1]]})
     d1, d2 = env.dir(f"{tag}-plumed"), env.dir(f"{tag}-pull")
     env.grompp(d1, "water", mdp, ndx=ndx)
     env.grompp(d2, "water", {**mdp, **PULL}, ndx=ndx)
     write(d1 / "plumed.dat", RESTRAINT.format(a=atoms[0], b=atoms[1]) + plumed_extra)
     run_ok(env, d1, env.mdrun(d1, np, args=dd(np)), "PLUMED")
     run_ok(env, d2, env.mdrun(d2, np, plumed=None, args=dd(np)), "pull code")
-    return compare_runs(env, d1, d2, f"PLUMED against pull code, {np} rank{'s' * (np > 1)}", force_steps=force_steps)
+    return compare_runs(env, d1, d2, f"PLUMED against pull code, {np} rank{'s' * (np > 1)}")
 
 
 @test("pull")
@@ -319,10 +328,7 @@ def t_pull_mts(env):
     if env.version < (2021, 0):
         raise Skip("no multiple time stepping before GROMACS 2021")
     return restraint_vs_pull(env, "pull-mts", plumed_extra=SPECTATOR.format(stride=2),
-                             mdp_extra={**MTS, "nstcalcenergy": 4, "nstenergy": 4, "nstfout": 2},
-                             # on the slow steps PLUMED applies its forces to the buffer used by the update:
-                             # the forces written to the trajectory (the other buffer) do not include them
-                             force_steps=())
+                             mdp_extra={**MTS, "nstcalcenergy": 4, "nstenergy": 4, "nstfout": 2})
 
 
 @test("mts-fast-step")
@@ -408,7 +414,9 @@ def t_em(env):
                                (f"em-{name}-energy-np2", 2, SPECTATOR.format(stride=1))):
             dist = em_distances(env, tag, atoms, np, extra)
             diff = maxdiff(ref, dist)
-            check(len(dist) == len(ref) and diff < 1e-4,
+            # the minimizer takes a step depending on energies that 1 and 2 ranks sum in a different order: the
+            # distances can differ by 1e-4 nm, the bugs this checks give other atoms or NaN
+            check(len(dist) == len(ref) and diff < 1e-3,
                   f"{name}, {tag[len('em-' + name) + 1:]}: {len(dist)} steps, distances differ by {diff:.3g} nm from 1 rank")
         msgs.append(f"{name}: same {len(ref)} distances")
     return "; ".join(msgs)
@@ -546,10 +554,12 @@ def t_rerun(env):
     shutil.copy(d0 / "topol.tpr", d)
     write(d / "plumed.dat", COMMITTOR.format(t=0.0))
     run_ok(env, d, env.mdrun(d, 1, args=["-rerun", str(d0 / "md.trr")]), "rerun with COMMITTOR")
-    n = len(colvar(d / "COLVAR").get("phi", []))
-    # the legacy patches stop at the frame that commits, the native module two frames later (the stop handler
-    # gets the request at the end of a frame and communicates it at the end of the next one)
-    check(1 <= n <= 3, f"rerun with COMMITTOR committing at the first frame went through {n} of 11 frames")
+    t = colvar(d / "COLVAR").get("time", [])
+    commit = [float(line.split()[0]) for line in (d / "COMMIT").read_text().splitlines()
+              if line.strip() and not line.startswith("#")] if (d / "COMMIT").exists() else []
+    check(commit and t and t[-1] == commit[0],
+          f"rerun with COMMITTOR: committed at time {commit[0] if commit else None}, stopped after {len(t)} of 11 "
+          f"frames (last time {t[-1] if t else None})")
     return "; ".join(msgs) + "; COMMITTOR stops it"
 
 
@@ -592,7 +602,8 @@ def t_hrex(env):
 
 @test("shells")
 def t_shells(env):
-    """shell (polarizable) particles: PLUMED is applied once per step (or mdrun refuses them)"""
+    """shell (polarizable) particles: PLUMED is applied once per step, also in a rerun, and mdrun warns when PLUMED
+    needs the energy, which is the one before the shells are relaxed (or mdrun refuses shells)"""
     d = env.dir("shells")
     env.grompp(d, "shell", {})
     write(d / "plumed.dat", "d: DISTANCE ATOMS=1,6\nmetad: METAD ARG=d PACE=3 HEIGHT=1.0 SIGMA=0.05 FILE=HILLS\n"
@@ -606,7 +617,20 @@ def t_shells(env):
     t = colvar(d / "COLVAR")["time"]
     h = colvar(d / "HILLS")["time"]
     check(len(t) == len(set(t)) == 21 and len(h) == 6, f"{len(t)} COLVAR lines ({len(set(t))} distinct), {len(h)} hills")
-    return "one PLUMED update per step"
+    # the starting structure, whose shells are not relaxed: the rerun relaxes them in a few iterations
+    d2 = env.dir("shells-rerun")
+    shutil.copy(d / "topol.tpr", d2)
+    write(d2 / "plumed.dat", "d: DISTANCE ATOMS=1,6\nPRINT ARG=d STRIDE=1 FILE=COLVAR\n")
+    run_ok(env, d2, env.mdrun(d2, args=["-rerun", str(SYSTEMS / "shell" / "sw-dimer.g96")]), "rerun")
+    n = len(colvar(d2 / "COLVAR")["time"])
+    check(n == 1, f"rerun of one frame: {n} COLVAR lines")
+    d3 = env.dir("shells-energy")
+    env.grompp(d3, "shell", {"nsteps": 2})
+    write(d3 / "plumed.dat", "e: ENERGY\nPRINT ARG=e STRIDE=1 FILE=COLVAR\n")
+    run_ok(env, d3, env.mdrun(d3), "with ENERGY")
+    check("before the shells are relaxed" in " ".join((d3 / "md.log").read_text().split()),
+          "with ENERGY: no warning that PLUMED gets the energy before the shells are relaxed")
+    return "one PLUMED update per step, also in a rerun; a warning with ENERGY"
 
 
 EXPANDED = {"integrator": "md-vv", "nsteps": 200, "nstcalcenergy": 10, "free-energy": "expanded",
@@ -691,8 +715,8 @@ def t_replex_bias(env):
         n = len(re.findall(r"dplumed", (d / "w0" / "md.log").read_text()))
         check(n > 0, "no PLUMED bias in the exchange criterion")
         return f"{n} exchange attempts with the PLUMED bias"
-    check(rc != 0 and "not compatible" in out and "Internal error" not in out,
-          f"mdrun exit {rc}: {gromacs_error(out)[:300]}")
+    check(rc != 0, "mdrun ran replica exchange without the PLUMED bias in the exchange criterion, and without an error")
+    check("not compatible" in out and "Internal error" not in out, f"mdrun exit {rc}: {gromacs_error(out)[:300]}")
     return "refused with a clear error"
 
 
@@ -716,31 +740,22 @@ def t_gpu(env):
 
 # ------------------------------------------------------------------------------------------------- main
 
-def main():
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--gmx", help="the gmx_mpi binary of a patched GROMACS")
-    ap.add_argument("--kernel", help="libplumedKernel.so of the PLUMED to test")
-    ap.add_argument("--mpirun", default="mpirun --oversubscribe --bind-to none", help="MPI launcher")
-    ap.add_argument("--tests", default=".", help="regular expression selecting the tests")
-    ap.add_argument("--out", default=None, help="directory for the runs (default results/LABEL)")
-    ap.add_argument("--label", default=None, help="name of this combination in the results")
-    ap.add_argument("--timeout", type=int, default=600)
-    ap.add_argument("--list", action="store_true", help="list the tests and exit")
-    a = ap.parse_args()
-    if a.list:
-        for name, f in TESTS:
-            print(f"{name:18s} {' '.join(f.__doc__.split())}")
-        return 0
-    if not (a.gmx and a.kernel):
-        ap.error("--gmx and --kernel are required")
-    label = a.label or Path(a.gmx).resolve().parents[1].name
-    out = Path(a.out or HERE / "results" / label)
-    env = Gromacs(a.gmx, a.kernel, a.mpirun.split(), out, a.timeout)
-    print(f"# {label}: GROMACS {env.version[0]}.{env.version[1]}, {'legacy patch' if env.legacy else 'native module'}"
-          f"{', CUDA' if env.cuda else ''}; kernel {a.kernel}")
+MPIRUN = "mpirun --oversubscribe --bind-to none"
+
+
+def run(gmx, kernel=None, out="regtests", tests=".", mpirun=MPIRUN, timeout=120, log=print):
+    """Run the tests (those whose name matches the regular expression TESTS) in the directory OUT, with GMX (the
+    gmx_mpi of a patched GROMACS, or a command that runs it with its arguments) and the PLUMED KERNEL (None: the
+    one that GMX loads by itself). Return {test: {"status", "message", "description", "seconds"}}."""
+    try:
+        env = Gromacs(gmx, kernel, mpirun.split(), out, timeout)
+    except Exception as e:
+        return {"gromacs": {"status": "FAIL", "message": str(e), "description": "GROMACS runs", "seconds": 0}}
+    log(f"# GROMACS {env.version[0]}.{env.version[1]}, {'legacy patch' if env.legacy else 'native module'}"
+        f"{', CUDA' if env.cuda else ''}; {gmx}; kernel {kernel or '(loaded by GROMACS)'}")
     results = {}
     for name, f in TESTS:
-        if not re.search(a.tests, name):
+        if not re.search(tests, name):
             continue
         t0 = time.time()
         try:
@@ -751,10 +766,36 @@ def main():
             status, msg = "FAIL", str(e)
         except Exception as e:  # a bug of the harness or an unexpected output: report it as a failure
             status, msg = "FAIL", f"{type(e).__name__}: {e}"
-        results[name] = {"status": status, "message": msg, "seconds": round(time.time() - t0, 1)}
-        print(f"{status:4s}  {name:18s} {msg}  [{results[name]['seconds']} s]", flush=True)
-    (out / "results.json").write_text(json.dumps({"label": label, "gromacs": env.version, "legacy": env.legacy,
-                                                  "kernel": str(a.kernel), "results": results}, indent=1))
+        results[name] = {"status": status, "message": msg, "description": " ".join(f.__doc__.split()),
+                         "seconds": round(time.time() - t0, 1)}
+        log(f"{status:4s}  {name:18s} {msg}  [{results[name]['seconds']} s]")
+    return results
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--gmx", help="the gmx_mpi of a patched GROMACS (a path, or a command in the PATH)")
+    ap.add_argument("--kernel", help="libplumedKernel.so of the PLUMED to test (default: PLUMED_KERNEL, or the "
+                                     "PLUMED that GROMACS is linked to)")
+    ap.add_argument("--mpirun", default=MPIRUN, help="MPI launcher")
+    ap.add_argument("--tests", default=".", help="regular expression selecting the tests")
+    ap.add_argument("--out", default="regtests", help="directory for the runs and results.json")
+    ap.add_argument("--timeout", type=int, default=120, help="seconds before a run is killed as hanging")
+    ap.add_argument("--list", action="store_true", help="list the tests and exit")
+    a = ap.parse_args()
+    if a.list:
+        for name, f in TESTS:
+            print(f"{name:18s} {' '.join(f.__doc__.split())}")
+        return 0
+    if not a.gmx:
+        ap.error("--gmx is required")
+    if os.environ.get("MPI_HOME"):  # an MPI that is not in the PATH
+        mpi = os.environ["MPI_HOME"]
+        os.environ["PATH"] = f"{mpi}/bin:{os.environ['PATH']}"
+        os.environ["LD_LIBRARY_PATH"] = f"{mpi}/lib:{os.environ.get('LD_LIBRARY_PATH', '')}"
+    results = run(a.gmx, a.kernel, a.out, a.tests, a.mpirun, a.timeout, log=lambda m: print(m, flush=True))
+    Path(a.out).mkdir(parents=True, exist_ok=True)
+    (Path(a.out) / "results.json").write_text(json.dumps(results, indent=1))
     return 1 if any(r["status"] == "FAIL" for r in results.values()) else 0
 
 

@@ -4,8 +4,9 @@
     matrix.py [--matrix matrix.txt] [--jobs 4] [--tests REGEX] [--only REGEX] [--report-only]
 
 Each non-comment line of the matrix file is: LABEL GROMACS_INSTALL KERNEL_INSTALL, where the installs are
-directories under cache/gromacs and cache/plumed (or absolute paths). The table is written to
-results/matrix.md (with emoji for the colors) and results/matrix.html, with one column per combination.
+directories under cache/gromacs and cache/plumed (or absolute paths). The runs are in results/LABEL. The table,
+with one column per combination, is written to RESULTS.md (with emoji for the colors) and results/matrix.html;
+a run of the whole matrix also adds a line to HISTORY.md.
 """
 import argparse
 import json
@@ -24,11 +25,11 @@ def install(path, kind):
 
 def run(combo, tests):
     label, gmx, kernel = combo
-    cmd = [sys.executable, str(HERE / "regtest.py"), "--gmx", str(install(gmx, "gromacs") / "bin" / "gmx_mpi"),
-           "--kernel", str(install(kernel, "plumed") / "lib" / "libplumedKernel.so"), "--label", label,
-           "--tests", tests]
     out = HERE / "results" / label
     out.mkdir(parents=True, exist_ok=True)
+    cmd = [sys.executable, str(HERE / "regtest.py"), "--gmx", str(install(gmx, "gromacs") / "bin" / "gmx_mpi"),
+           "--kernel", str(install(kernel, "plumed") / "lib" / "libplumedKernel.so"), "--out", str(out),
+           "--tests", tests]
     with open(out / "regtest.log", "w") as log:
         subprocess.run(cmd, stdout=log, stderr=subprocess.STDOUT)
     return label
@@ -57,17 +58,29 @@ def read_matrix(path):
 
 
 def header(label, sep):
-    """2024.3/v2.9-fix:k2.10f -> GROMACS version, patches and (if not the one of the patches) the kernel"""
+    """2026.4/vanilla:v2.10 -> GROMACS version, patches (a PLUMED branch, or vanilla) and the kernel if given"""
     rest, _, kernel = label.partition(":")
     return sep.join(x for x in rest.split("/", 1) + [kernel] if x)
 
 
-def report(combos, groups):
+def plumed_commits(combos):
+    """{kernel label: commit} of the PLUMED builds used by the combinations"""
+    commits = {}
+    for _, _, kernel in combos:
+        f = install(kernel, "plumed") / "GITREF"
+        if kernel not in commits and f.exists():
+            commits[kernel] = f.read_text().strip()[:9]
+    return commits
+
+
+def report(combos, groups, history=False):
+    from datetime import date
+    import platform
     data = {}
     for label, _, _ in combos:
         f = HERE / "results" / label / "results.json"
         if f.exists():
-            data[label] = json.loads(f.read_text())["results"]
+            data[label] = json.loads(f.read_text())
     tests = []
     for r in data.values():
         tests += [t for t in r if t not in tests]
@@ -76,15 +89,34 @@ def report(combos, groups):
     fails = {l: [(t, r["message"]) for t, r in data[l].items() if r["status"] == "FAIL"] for l in labels}
 
     # markdown, with emoji for the colors (GitHub renders them)
-    lines = ["| test | " + " | ".join(header(l, "<br>") for l in labels) + " |", "|---|" + ":---:|" * len(labels)]
+    commits = plumed_commits(combos)
+    lines = ["# Results", "",
+             f"`matrix.py` on {date.today().isoformat()}, {platform.machine()}. PLUMED: "
+             + ", ".join(f"{k} `{c}`" for k, c in commits.items()) + ". Columns: GROMACS version, the PLUMED branch "
+             "whose patch was applied (vanilla: GROMACS without patches), and the kernel when it is not of that "
+             "branch.", "",
+             "| test | " + " | ".join(header(l, "<br>") for l in labels) + " |", "|---|" + ":---:|" * len(labels)]
     for t in tests:
         lines.append(f"| {t} | " + " | ".join(MARK.get(status[t, l], "") for l in labels) + " |")
     lines += ["", f"{MARK['PASS']} pass, {MARK['FAIL']} fail, {MARK['SKIP']} not applicable", ""]
+    f = HERE / "cache" / "build-failures.txt"
+    builds = [l for l in f.read_text().splitlines() if l.strip()] if f.exists() else []
+    if builds:
+        lines += ["Builds that failed (see `cache/logs`), not tested:", ""] + [f"- {l}" for l in builds] + [""]
     for l in labels:
         if fails[l]:
             lines += [f"**{l}**"] + [f"- {t}: {m}" for t, m in fails[l]] + [""]
-    (HERE / "results" / "matrix.md").write_text("\n".join(lines))
+    (HERE / "RESULTS.md").write_text("\n".join(lines))
     (HERE / "results" / "matrix.html").write_text(html_report(data, tests, labels, groups, status, fails))
+    if history:
+        f = HERE / "HISTORY.md"
+        if not f.exists():
+            f.write_text("# History\n\nOne line for each run of the whole matrix: the PLUMED commits tested, and the "
+                         "combinations that fail, with their failing tests.\n\n| date | PLUMED | failures |\n|---|---|---|\n")
+        failing = "; ".join([f"build of {l}" for l in builds]
+                            + [f"{l}: {' '.join(t for t, _ in fails[l])}" for l in labels if fails[l]]) or "none"
+        with open(f, "a") as h:
+            h.write(f"| {date.today().isoformat()} | {', '.join(f'{k} {c}' for k, c in commits.items())} | {failing} |\n")
 
     # terminal: one line per combination
     color = sys.stdout.isatty()
@@ -93,7 +125,7 @@ def report(combos, groups):
         counts = "  ".join((ANSI[k] if color and n[k] else "") + f"{SYMBOL[k]} {n[k]:2d}" + ("\033[0m" if color else "")
                            for k in MARK)
         print(f"{l:24s} {counts}   {' '.join(t for t, _ in fails[l])}")
-    print(f"tables: {HERE / 'results' / 'matrix.md'}, {HERE / 'results' / 'matrix.html'}")
+    print(f"tables: {HERE / 'RESULTS.md'}, {HERE / 'results' / 'matrix.html'}")
 
 
 def html_report(data, tests, labels, groups, status, fails):
@@ -216,8 +248,8 @@ dd {{ margin: 0; font-size: 0.85rem; overflow-wrap: anywhere; }}
 </header>
 <div class="legend"><span><span class="key PASS">✓</span>pass</span><span><span class="key FAIL">✗</span>fail</span>
 <span><span class="key SKIP">–</span>not applicable to this combination</span>
-<span>Columns: GROMACS version, PLUMED patches (-fix: with the fixes), kernel if not the one of the patches.
-Hover a test or a cell for what it checks and the numbers.</span></div>
+<span>Columns: GROMACS version, the PLUMED branch whose patch was applied (vanilla: GROMACS without patches), and
+the kernel when it is not of that branch. Hover a test or a cell for what it checks and the numbers.</span></div>
 <div class="scroll">
 <table>
 <thead>
@@ -257,7 +289,7 @@ def main():
         with ThreadPoolExecutor(a.jobs) as pool:
             for label in pool.map(lambda c: run(c, a.tests), selected):
                 print(f"done {label}", flush=True)
-    report(combos, groups)
+    report(combos, groups, history=not a.report_only and a.only == "" and a.tests == ".")
 
 
 if __name__ == "__main__":
