@@ -164,9 +164,12 @@ def report(combos, groups, history=False):
         f = HERE / "HISTORY.md"
         if not f.exists():
             f.write_text("# History\n\nOne line for each run of the whole matrix: the PLUMED commits tested, and the "
-                         "combinations that fail, with their failing tests.\n\n| date | PLUMED | failures |\n|---|---|---|\n")
+                         "patched combinations that fail, with their failing tests (GROMACS without patches is left "
+                         "out: it is expected to fail the tests of what only the patches add).\n\n"
+                         "| date | PLUMED | failures |\n|---|---|---|\n")
         failing = "; ".join([f"build of {l}" for l in builds]
-                            + [f"{l}: {' '.join(t for t, _ in fails[l])}" for l in labels if fails[l]]) or "none"
+                            + [f"{l}: {' '.join(t for t, _ in fails[l])}" for l in labels
+                               if fails[l] and "/vanilla" not in l]) or "none"
         with open(f, "a") as h:
             h.write(f"| {run_date} | {', '.join(f'{k} {c[:9]}' for k, c in commits.items())} | {failing} |\n")
 
