@@ -1,12 +1,21 @@
 # Regression tests for PLUMED with GROMACS
 
+<!-- summary: written by matrix.py -->
+Last run on 2026-10-15, with PLUMED v2.9 [`8e9e512a2`](https://github.com/plumed/plumed2/commit/8e9e512a200c9d78e952b885d18622e0a9fefb8f), v2.10 [`4b8956204`](https://github.com/plumed/plumed2/commit/4b8956204984c2bfbfc6335f0577d576882c13e3), master [`b279e3a3a`](https://github.com/plumed/plumed2/commit/b279e3a3ab8df63ca1515204a4ed20aa09db7617): ✅ all the tests pass, ❌ some fail (or the build failed), empty: no patch for that version of GROMACS. The [full results](RESULTS.md) have the tests and the numbers, and the [history](HISTORY.md) the earlier runs.
+
+| PLUMED \ GROMACS | 2020.7 | 2021.7 | 2022.5 | 2023.5 | 2024.3 | 2025.5 | 2026.4 |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| v2.9 | ✅ | ✅ | ✅ | ✅ | ✅ |  |  |
+| v2.10 |  |  | ❌ | ❌ | ❌ | ❌ | ❌ |
+| master |  |  |  |  | ❌ | ❌ | ❌ |
+
+GROMACS without patches, which fails the tests of what only the patches of PLUMED add, is in the full results.
+<!-- /summary -->
+
 This repository keeps track of which combinations of PLUMED and GROMACS work, and which break. It builds the
 branches of [PLUMED](https://github.com/plumed/plumed2) (`v2.9`, `v2.10` and `master`), patches each GROMACS
 version that a branch has a patch for, builds GROMACS without patches (with the PLUMED module that GROMACS
 includes since version 2025), and runs the same regression tests on all the combinations.
-
-- [RESULTS.md](RESULTS.md): the results of the last run, with the PLUMED commits that were tested.
-- [HISTORY.md](HISTORY.md): one line for each run, with the combinations that failed.
 
 PLUMED's own regtests run PLUMED alone (through `plumed driver`), so nothing in PLUMED tests the GROMACS
 patches, which are large and differ for each GROMACS version. The [PLUMED testcenter](https://plumed-testcenter.github.io)
@@ -49,7 +58,7 @@ and the checkpoints of PLUMED): this is expected, and shows what the patches add
 export MPI_HOME=/path/to/mpi   # if mpirun and mpicc are not in the PATH
 ./build-all.sh                 # build the PLUMED branches and GROMACS in cache/, and write matrix.txt
 ./matrix.py --jobs 4           # run the tests on all the combinations: RESULTS.md, HISTORY.md, results/
-git add RESULTS.md HISTORY.md && git commit -m "Results of $(date +%F)"
+git add README.md RESULTS.md HISTORY.md && git commit -m "Results of $(date +%F)"
 ```
 
 `build-all.sh` builds PLUMED from the current heads of the branches (from a mirror of the PLUMED repository in
@@ -64,8 +73,8 @@ combinations are left out. A patch named after the first release of a series (e.
 applied as a diff to any 2026 release) is tested on the latest release of the series.
 
 `matrix.py` runs `regtest.py` on each combination of `matrix.txt` (the runs, with their inputs and logs, are in
-`results/`), and writes the table to `RESULTS.md` and `results/matrix.html`. A run of the whole matrix also adds
-a line to `HISTORY.md`. `--only REGEX` selects combinations, `--tests REGEX` selects tests, `--report-only`
+`results/`), writes the summary at the start of this README, and the full table to `RESULTS.md` and
+`results/matrix.html`. A run of the whole matrix also adds a line to `HISTORY.md`. `--only REGEX` selects combinations, `--tests REGEX` selects tests, `--report-only`
 writes the tables again from the existing results.
 
 A single combination, or any GROMACS built with MPI:

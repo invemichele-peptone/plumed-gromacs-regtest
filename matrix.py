@@ -64,23 +64,74 @@ def header(label, sep):
 
 
 def plumed_commits(combos):
-    """{kernel label: commit} of the PLUMED builds used by the combinations"""
+    """{kernel label: full commit} of the PLUMED builds used by the combinations"""
     commits = {}
     for _, _, kernel in combos:
         f = install(kernel, "plumed") / "GITREF"
         if kernel not in commits and f.exists():
-            commits[kernel] = f.read_text().strip()[:9]
+            commits[kernel] = f.read_text().strip()
     return commits
+
+
+def summary(labels, fails, builds, commits, run_date):
+    """The table at the start of README.md: the PLUMED branches down, the patched GROMACS versions across, a cell
+    green if all the tests pass and red if some fail or the build failed"""
+    import re
+    cells, branches, versions = {}, [], []
+
+    def add(branch, version, mark):
+        branches.extend([branch] if branch not in branches else [])
+        versions.extend([version] if version not in versions else [])
+        cells[branch, version] = mark
+
+    for l in labels:
+        rest, _, kernel = l.partition(":")
+        version, _, branch = rest.partition("/")
+        if branch != "vanilla" and not kernel:
+            add(branch, version, MARK["FAIL"] if fails[l] else MARK["PASS"])
+    for b in builds:
+        m = re.fullmatch(r"GROMACS (\S+)( with CUDA and| with) PLUMED (\S+)", b)
+        if m:
+            add(m.group(3), m.group(1) + ("-cuda" if "CUDA" in m.group(2) else ""), MARK["FAIL"] + " build")
+        elif b.startswith("PLUMED "):
+            branches.extend([b.split()[1]] if b.split()[1] not in branches else [])
+            cells[b.split()[1], None] = "build failed"
+    versions.sort(key=lambda v: ([int(x) for x in v.split("-")[0].split(".")], v))
+    link = lambda k, c: f"{k} [`{c[:9]}`](https://github.com/plumed/plumed2/commit/{c})"
+    lines = [f"Last run on {run_date}, with PLUMED " + ", ".join(link(k, c) for k, c in commits.items())
+             + f": {MARK['PASS']} all the tests pass, {MARK['FAIL']} some fail (or the build failed), empty: no patch "
+             "for that version of GROMACS. The [full results](RESULTS.md) have the tests and the numbers, and the "
+             "[history](HISTORY.md) the earlier runs.", "",
+             "| PLUMED \\ GROMACS | " + " | ".join(versions) + " |", "|---|" + ":---:|" * len(versions)]
+    for b in branches:
+        name = f"{b} (build failed)" if (b, None) in cells else b
+        lines.append(f"| {name} | " + " | ".join(cells.get((b, v), "") for v in versions) + " |")
+    lines += ["", "GROMACS without patches, which fails the tests of what only the patches of PLUMED add, is in the "
+              "full results."]
+    return "\n".join(lines)
+
+
+def write_summary(text):
+    """Replace the text between the summary markers of README.md"""
+    readme = HERE / "README.md"
+    begin, end = "<!-- summary: written by matrix.py -->", "<!-- /summary -->"
+    s = readme.read_text()
+    if begin in s and end in s:
+        s = s[:s.index(begin) + len(begin)] + "\n" + text + "\n" + s[s.index(end):]
+        readme.write_text(s)
 
 
 def report(combos, groups, history=False):
     from datetime import date
     import platform
-    data = {}
+    data, mtimes = {}, []
     for label, _, _ in combos:
         f = HERE / "results" / label / "results.json"
         if f.exists():
             data[label] = json.loads(f.read_text())
+            mtimes.append(f.stat().st_mtime)
+    # the date of the results (a report written again later keeps it)
+    run_date = date.fromtimestamp(max(mtimes)).isoformat() if mtimes else date.today().isoformat()
     tests = []
     for r in data.values():
         tests += [t for t in r if t not in tests]
@@ -91,8 +142,8 @@ def report(combos, groups, history=False):
     # markdown, with emoji for the colors (GitHub renders them)
     commits = plumed_commits(combos)
     lines = ["# Results", "",
-             f"`matrix.py` on {date.today().isoformat()}, {platform.machine()}. PLUMED: "
-             + ", ".join(f"{k} `{c}`" for k, c in commits.items()) + ". Columns: GROMACS version, the PLUMED branch "
+             f"`matrix.py` on {run_date}, {platform.machine()}. PLUMED: "
+             + ", ".join(f"{k} `{c[:9]}`" for k, c in commits.items()) + ". Columns: GROMACS version, the PLUMED branch "
              "whose patch was applied (vanilla: GROMACS without patches), and the kernel when it is not of that "
              "branch.", "",
              "| test | " + " | ".join(header(l, "<br>") for l in labels) + " |", "|---|" + ":---:|" * len(labels)]
@@ -107,6 +158,7 @@ def report(combos, groups, history=False):
         if fails[l]:
             lines += [f"**{l}**"] + [f"- {t}: {m}" for t, m in fails[l]] + [""]
     (HERE / "RESULTS.md").write_text("\n".join(lines))
+    write_summary(summary(labels, fails, builds, commits, run_date))
     (HERE / "results" / "matrix.html").write_text(html_report(data, tests, labels, groups, status, fails))
     if history:
         f = HERE / "HISTORY.md"
@@ -116,7 +168,7 @@ def report(combos, groups, history=False):
         failing = "; ".join([f"build of {l}" for l in builds]
                             + [f"{l}: {' '.join(t for t, _ in fails[l])}" for l in labels if fails[l]]) or "none"
         with open(f, "a") as h:
-            h.write(f"| {date.today().isoformat()} | {', '.join(f'{k} {c}' for k, c in commits.items())} | {failing} |\n")
+            h.write(f"| {run_date} | {', '.join(f'{k} {c[:9]}' for k, c in commits.items())} | {failing} |\n")
 
     # terminal: one line per combination
     color = sys.stdout.isatty()
@@ -125,7 +177,7 @@ def report(combos, groups, history=False):
         counts = "  ".join((ANSI[k] if color and n[k] else "") + f"{SYMBOL[k]} {n[k]:2d}" + ("\033[0m" if color else "")
                            for k in MARK)
         print(f"{l:24s} {counts}   {' '.join(t for t, _ in fails[l])}")
-    print(f"tables: {HERE / 'RESULTS.md'}, {HERE / 'results' / 'matrix.html'}")
+    print(f"tables: {HERE / 'README.md'} (summary), {HERE / 'RESULTS.md'}, {HERE / 'results' / 'matrix.html'}")
 
 
 def html_report(data, tests, labels, groups, status, fails):
